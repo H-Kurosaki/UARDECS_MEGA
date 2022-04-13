@@ -4,6 +4,7 @@ char UECSbuffer[BUF_SIZE];//main buffer
 char UECStempStr20[MAX_TYPE_CHAR];//sub buffer
 EthernetUDP UECS_UDP16520;
 EthernetUDP UECS_UDP16529;
+EthernetUDP UECS_UDP16521;
 EthernetServer UECSlogserver(80);
 EthernetClient UECSclient;
 
@@ -223,9 +224,9 @@ void UECScheckUpDate(UECSTEMPCCM* _tempCCM, unsigned long _time,int startid){
       if(U_ccmList[i].ccmLevel == NONE || U_ccmList[i].sender == true){continue;}
       
       
-          if(!((_tempCCM->attribute[AT_ROOM] == 0 || _tempCCM->attribute[AT_ROOM] == U_ccmList[i].baseAttribute[AT_ROOM]) &&
-             (_tempCCM->attribute[AT_REGI] == 0 || _tempCCM->attribute[AT_REGI] == U_ccmList[i].baseAttribute[AT_REGI]) &&
-             (_tempCCM->attribute[AT_ORDE] == 0 || _tempCCM->attribute[AT_ORDE] == U_ccmList[i].baseAttribute[AT_ORDE]))){continue;}
+          if(!((_tempCCM->attribute[AT_ROOM] == 0 || U_ccmList[i].baseAttribute[AT_ROOM]==0 || _tempCCM->attribute[AT_ROOM] == U_ccmList[i].baseAttribute[AT_ROOM]) &&
+               (_tempCCM->attribute[AT_REGI] == 0 || U_ccmList[i].baseAttribute[AT_REGI]==0 || _tempCCM->attribute[AT_REGI] == U_ccmList[i].baseAttribute[AT_REGI]) &&
+               (_tempCCM->attribute[AT_ORDE] == 0 || U_ccmList[i].baseAttribute[AT_ORDE]==0 || _tempCCM->attribute[AT_ORDE] == U_ccmList[i].baseAttribute[AT_ORDE]))){continue;}
 
         //type 
         if(strcmp(U_ccmList[i].typeStr, _tempCCM->type) != 0){continue;}
@@ -255,13 +256,13 @@ void UECScheckUpDate(UECSTEMPCCM* _tempCCM, unsigned long _time,int startid){
                         if(address_t<=address_b)
                         {up = true;} 
                       }
-                      else if (_tempCCM->attribute[AT_ORDE] == U_ccmList[i].baseAttribute[AT_ORDE])
+                      else if (_tempCCM->attribute[AT_ORDE] == U_ccmList[i].baseAttribute[AT_ORDE] || U_ccmList[i].baseAttribute[AT_ORDE]==0)
                       {up = true;}                         
                     }
-                    else if (_tempCCM->attribute[AT_REGI] == U_ccmList[i].baseAttribute[AT_REGI])
+                    else if (_tempCCM->attribute[AT_REGI] == U_ccmList[i].baseAttribute[AT_REGI] || U_ccmList[i].baseAttribute[AT_REGI]==0)
                     {up = true;}                       
                   }
-                  else if (_tempCCM->attribute[AT_ROOM] == U_ccmList[i].baseAttribute[AT_ROOM])
+                  else if (_tempCCM->attribute[AT_ROOM] == U_ccmList[i].baseAttribute[AT_ROOM]  || U_ccmList[i].baseAttribute[AT_ROOM]==0)
                   {up = true;} 
                 }
 
@@ -417,10 +418,35 @@ boolean UECSresNodeScan(){
 //------------------------------------------------------------------
 void UECSautomaticSendManager()
 {
+/*
+UDP transmission load balancing
+Improved UDP send timing not to be concentrated in Ver2.0 or later.
+Packets sent at 10-second and 60-second intervals were sent together in past versions, but are sent separately in the new version.
+Transmission timing is distributed according to the order of registration of the lower one of the IP addresses and the CCM.
+However, this load balancing is ineffective for packets sent every second.
+*/
+int timing_count;
+
 for(int id=0;id<U_MAX_CCM;id++)
 	{
   if(U_ccmList[id].ccmLevel == NONE || !U_ccmList[id].sender){continue;}
 
+  	//Timeout judgment of the sending CCM
+   	if(U_ccmList[id].flagStimeRfirst == true)
+	   		{
+	   		U_ccmList[id].recmillis=0;
+    		U_ccmList[id].validity=true;
+    		}
+     else
+     	{
+     	if((U_ccmList[id].ccmLevel==A_1S_0 || U_ccmList[id].ccmLevel==A_1S_1)&& U_ccmList[id].recmillis>1000){U_ccmList[id].validity=false;}
+     	else if((U_ccmList[id].ccmLevel==A_10S_0 || U_ccmList[id].ccmLevel==A_10S_1)&& U_ccmList[id].recmillis>10000){U_ccmList[id].validity=false;}
+     	else if((U_ccmList[id].ccmLevel==A_1M_0 || U_ccmList[id].ccmLevel==A_1M_1)&& U_ccmList[id].recmillis>60000){U_ccmList[id].validity=false;}
+     	}
+   	if(U_ccmList[id].recmillis<36000000){U_ccmList[id].recmillis+=1000;}
+
+		//Determination of CCM transmission timing
+	  timing_count=U_orgAttribute.ip[3]+id;
 	  if((U_ccmList[id].ccmLevel == A_10S_1 || U_ccmList[id].ccmLevel == A_1M_1 ) && U_ccmList[id].old_value!=U_ccmList[id].value)
   	  {
   	  U_ccmList[id].flagStimeRfirst = true;
@@ -429,19 +455,19 @@ for(int id=0;id<U_MAX_CCM;id++)
       {
         U_ccmList[id].flagStimeRfirst = true;
        }
-       else if((UECSsyscounter60s % 10 == 0) && (U_ccmList[id].ccmLevel == A_10S_0 || U_ccmList[id].ccmLevel == A_10S_1))
+       else if((UECSsyscounter60s % 10 == (timing_count % 10)) && (U_ccmList[id].ccmLevel == A_10S_0 || U_ccmList[id].ccmLevel == A_10S_1))
        {
          U_ccmList[id].flagStimeRfirst = true;
        }
-       else if(UECSsyscounter60s == 0 && (U_ccmList[id].ccmLevel == A_1M_0 || U_ccmList[id].ccmLevel == A_1M_1 || U_ccmList[id].ccmLevel == S_1M_0))
+       else if(UECSsyscounter60s == (timing_count % 60) && (U_ccmList[id].ccmLevel == A_1M_0 || U_ccmList[id].ccmLevel == A_1M_1 || U_ccmList[id].ccmLevel == S_1M_0))
        {
          U_ccmList[id].flagStimeRfirst = true;
        }
-       else{
+       else
+       {
          U_ccmList[id].flagStimeRfirst = false;
        }
-       
-       U_ccmList[id].old_value=U_ccmList[id].value;
+       	U_ccmList[id].old_value=U_ccmList[id].value;
 	}
 }
 //----------------------------------------------------------------------
@@ -708,20 +734,26 @@ HTTPAddPGMCharToBuffer(&(UECStdtd[0])); //</td><td>
  dtostrf(((double)U_ccmList[i].value) / pow(10, U_ccmList[i].decimal), -1, U_ccmList[i].decimal,UECStempStr20);
 HTTPAddCharToBuffer(UECStempStr20);
 HTTPAddPGMCharToBuffer(&(UECStdtd[0])); //</td><td>
- if(U_ccmList[i].sender){
 
- }else{
- if(U_ccmList[i].validity){
- HTTPAddPGMCharToBuffer(UECSTxtPartOK);
- }else{
- HTTPAddPGMCharToBuffer(UECSTxtPartHyphen);
+ if(U_ccmList[i].sender)
+ {/*
+	 if(U_ccmList[i].validity)
+		 {HTTPAddPGMCharToBuffer(UECSTxtPartSend);}
+	 else
+	 	{HTTPAddPGMCharToBuffer(UECSTxtPartStop);}
+	 	*/
  }
-
+ else
+ {
+	 if(U_ccmList[i].validity)
+		 {HTTPAddPGMCharToBuffer(UECSTxtPartOK);}
+	 else
+	 	{HTTPAddPGMCharToBuffer(UECSTxtPartHyphen);}
  } 
 
 HTTPAddPGMCharToBuffer(&(UECStdtd[0])); //</td><td> 
  
- if(U_ccmList[i].flagStimeRfirst && U_ccmList[i].sender == false)
+if(U_ccmList[i].flagStimeRfirst && U_ccmList[i].sender == false)
  {
  	 if(U_ccmList[i].recmillis<36000000)
  	 	{HTTPAddValueToBuffer(U_ccmList[i].recmillis / 1000);}
@@ -1301,10 +1333,7 @@ UECSclient=UECSlogserver.available();
 
 
 
-//////////////////
-//// html ////////
-//////////////////
-
+//----------------------------------
 void UECSupdate16520portReceive( UECSTEMPCCM* _tempCCM, unsigned long _millis){
   int packetSize = UECS_UDP16520.parsePacket();
   int matchCCMID=-1;
@@ -1322,7 +1351,7 @@ void UECSupdate16520portReceive( UECSTEMPCCM* _tempCCM, unsigned long _millis){
   }
 
 }
-
+//----------------------------------
 void UECSupdate16529port( UECSTEMPCCM* _tempCCM){
 
   int packetSize = UECS_UDP16529.parsePacket();
@@ -1344,8 +1373,23 @@ void UECSupdate16529port( UECSTEMPCCM* _tempCCM){
          	}
       }     
    }
-
 }
+
+//----------------------------------
+void UECSupdate16521port( UECSTEMPCCM* _tempCCM){
+
+  int packetSize = UECS_UDP16521.parsePacket();
+   if(packetSize){
+   	   
+   	   ClearMainBuffer();
+      _tempCCM->address = UECS_UDP16521.remoteIP();   
+      UECSbuffer[UECS_UDP16521.read(UECSbuffer, BUF_SIZE-1)]='\0';
+	  UDPFilterToBuffer();
+	  UECSresCCMSearchAndSend(_tempCCM);
+   }
+}
+
+
 //----------------------------------
 
 
@@ -1452,15 +1496,29 @@ for(i=0;i<MAX_CCMTYPESIZE;i++)
 	}
 	U_ccmList[ccmid].typeStr[i]='\0';
 	
-	
+/*
 U_ccmList[ccmid].baseAttribute[AT_ROOM]=EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_ROOM) & 127;
 U_ccmList[ccmid].baseAttribute[AT_REGI]=EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_REGI) & 127;
 U_ccmList[ccmid].baseAttribute[AT_ORDE]=
 	(EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_ORDE_L)+
 	EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_ORDE_H)*256) & 32767;
 U_ccmList[ccmid].baseAttribute[AT_PRIO]=EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_PRIO) & 31;
+U_ccmList[ccmid].attribute[AT_PRIO] =U_ccmList[ccmid].baseAttribute[AT_PRIO];
+*/
+U_ccmList[ccmid].baseAttribute[AT_ROOM]=EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_ROOM);
+U_ccmList[ccmid].baseAttribute[AT_REGI]=EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_REGI);
+U_ccmList[ccmid].baseAttribute[AT_ORDE]=(EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_ORDE_L)+EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_ORDE_H)*256);
+U_ccmList[ccmid].baseAttribute[AT_PRIO]=EEPROM.read(ccmid*EEPROM_L_CCM_TOTAL+EEPROM_CCMTOP+EEPROM_L_CCM_PRIO);
 
-
+//Prepare the correct values for the Arduino where the data will be written for the first time.
+if(U_ccmList[ccmid].baseAttribute[AT_ROOM]==0xff)
+	{
+	U_ccmList[ccmid].baseAttribute[AT_ROOM]=1;
+	U_ccmList[ccmid].baseAttribute[AT_REGI]=1;
+	U_ccmList[ccmid].baseAttribute[AT_ORDE]=1;
+	U_ccmList[ccmid].baseAttribute[AT_PRIO]=U_ccmList[ccmid].attribute[AT_PRIO];
+	UECS_EEPROM_SaveCCMAttribute(ccmid);
+	}
 U_ccmList[ccmid].attribute[AT_PRIO] =U_ccmList[ccmid].baseAttribute[AT_PRIO];
 
 }
@@ -1483,6 +1541,7 @@ void UECSstartEthernet(){
   UECSlogserver.begin();
   UECS_UDP16520.begin(16520);
   UECS_UDP16529.begin(16529);
+  UECS_UDP16521.begin(16521);
 }
 
 //---------------------------------------------------------
@@ -1512,11 +1571,13 @@ void UECSloop(){
   // 1. http request
   // 2. udp16520Receive
   // 3. udp16529Receive and Send
+  // 4. udp16521Receive and Send
   // << USER MANAGEMENT >>
-  // 4. udp16520Send
+  // 5. udp16520Send
   HTTPcheckRequest();
   UECSupdate16520portReceive(&UECStempCCM, UECSnowmillis);
   UECSupdate16529port(&UECStempCCM);
+  UECSupdate16521port(&UECStempCCM);
   UserEveryLoop();  
 
  UECSnowmillis = millis();
@@ -1557,6 +1618,7 @@ if(UECSnowmillis<UECSlastmillis)
      	{
         UECSCreateCCMPacketAndSend(&U_ccmList[i]);
        }
+
     }   
 
 }
@@ -1651,7 +1713,6 @@ void UECSsetCCM(boolean _sender, signed char _num, const char* _name, const char
 if(U_orgAttribute.status&STATUS_PROGRAMUPDATE)
 	{
   	UECS_EEPROM_SaveCCMType(_num);
-  	//UECS_EEPROM_SaveCCMAttribute(_num);
 	}
 
   	UECS_EEPROM_LoadCCMSetting(_num);
@@ -2140,4 +2201,116 @@ if(U_html[i].data==data)
 	}
 }
 return false;
+}
+
+/********************************/
+/* 16521 Response   *************/
+/********************************/
+
+boolean UECSresCCMSearchAndSend(UECSTEMPCCM* _tempCCM){
+	//CCM provider search response
+	/*
+	In periodic transmission, only CCMs with a proven track record of transmission will return a response.
+	Among regularly sent CCMs, CCMs that have not been sent at the specified frequency will not return a response even if they are registered. 
+	This is to prevent accidental reference to broken sensors.
+	*/
+   	int i;
+	int progPos = 0;
+	int startPos = 0;
+	short room=0;
+	short region=0;
+	short order=0;
+	
+	if(!UECSFindPGMChar(UECSbuffer,&UECSccm_XMLHEADER[0],&progPos)){return false;}
+	startPos+=progPos;
+
+	if(!UECSFindPGMChar(&UECSbuffer[startPos],&UECSccm_UECSVER_E10[0],&progPos)){return false;}
+	startPos+=progPos;
+
+	if(!UECSFindPGMChar(&UECSbuffer[startPos],&UECSccm_CCMSEARCH[0],&progPos)){return false;}
+	startPos+=progPos;
+	
+	
+	//copy ccm type string
+	for(i=0;i<MAX_TYPE_CHAR;i++)
+	{
+	UECStempStr20[i]=UECSbuffer[startPos+i];
+	if(UECStempStr20[i]==ASCIICODE_DQUOT || UECStempStr20[i]=='\0')
+		{UECStempStr20[i]='\0';break;}
+	}
+	UECStempStr20[MAX_CCMTYPESIZE]='\0';
+	startPos=startPos+i;
+	
+	//Extract "room", "region", and "order". If not found, it is assumed to be zero.
+	UECSGetValPGMStrAndChr(&UECSbuffer[startPos],&UECSccm_CCMSEARCH_ROOM[0],'\"',&room,&progPos);
+	UECSGetValPGMStrAndChr(&UECSbuffer[startPos],&UECSccm_CCMSEARCH_REGION[0],'\"',&region,&progPos);
+	UECSGetValPGMStrAndChr(&UECSbuffer[startPos],&UECSccm_CCMSEARCH_ORDER[0],'\"',&order,&progPos);
+	//Serial.print(room);Serial.print("-");
+	//Serial.print(region);Serial.print("-");
+	//Serial.print(order);Serial.print("\n");
+	
+	
+for(int id=0;id<U_MAX_CCM;id++)
+	{
+	if(UECSCCMSimpleHitcheck(id,room,region,order))
+		{
+		//Serial.print(id);Serial.print("/");
+		//Serial.println(U_ccmList[id].typeStr);
+		//packet create
+		ClearMainBuffer();
+    	UDPAddPGMCharToBuffer(&(UECSccm_XMLHEADER[0]));
+    	UDPAddPGMCharToBuffer(&(UECSccm_UECSVER_E10[0]));
+    	UDPAddPGMCharToBuffer(&(UECSccm_CCMSERVER[0]));
+    	UDPAddCharToBuffer(UECStempStr20);
+    	UDPAddPGMCharToBuffer(&(UECSccm_ROOMTXT[0]));
+		//room
+		UDPAddValueToBuffer(U_ccmList[id].baseAttribute[AT_ROOM]);
+    	UDPAddPGMCharToBuffer(&(UECSccm_REGIONTXT[0]));
+		//region
+		UDPAddValueToBuffer(U_ccmList[id].baseAttribute[AT_REGI]);
+    	UDPAddPGMCharToBuffer(&(UECSccm_ORDERTXT[0]));
+		//order
+		UDPAddValueToBuffer(U_ccmList[id].baseAttribute[AT_ORDE]);
+    	UDPAddPGMCharToBuffer(&(UECSCCM_PRIOTXT[0]));
+		//priority
+		UDPAddValueToBuffer(U_ccmList[id].baseAttribute[AT_PRIO]);
+    	UDPAddPGMCharToBuffer(&(UECSccm_CLOSETAG[0]));
+		//IP
+		char iptxt[20];
+	    if(U_orgAttribute.status & STATUS_SAFEMODE)
+			{
+			UDPAddPGMCharToBuffer(&(UECSdefaultIPAddress[0]));
+			}
+		else
+			{
+		    sprintf(iptxt, "%d.%d.%d.%d", U_orgAttribute.ip[0], U_orgAttribute.ip[1], U_orgAttribute.ip[2], U_orgAttribute.ip[3]);
+		    UDPAddCharToBuffer(iptxt);
+		    }
+    	UDPAddPGMCharToBuffer(&(UECSccm_CCMSERVERCLOSE[0]));
+
+    	
+    	//----------------------------------------------send 
+		UECS_UDP16521.beginPacket(_tempCCM->address, 16521);
+        UECS_UDP16521.write(UECSbuffer);
+	        if(UECS_UDP16521.endPacket()==0)
+	         	{
+	  			UECSresetEthernet(); //when udpsend failed,reset ethernet status
+	         	}
+
+		}
+	
+	}
+
+    return true;
+}
+//------------------------------------------------------------------------------
+boolean UECSCCMSimpleHitcheck(int ccmid,short room,short region,short order)
+{
+if(U_ccmList[ccmid].ccmLevel == NONE || !U_ccmList[ccmid].sender){return false;}
+if(strcmp(U_ccmList[ccmid].typeStr,UECStempStr20) != 0){return false;}
+if(!U_ccmList[ccmid].validity && U_ccmList[ccmid].ccmLevel<=A_1M_1){return false;}
+if(!(room==0 || U_ccmList[ccmid].baseAttribute[AT_ROOM]==0 || U_ccmList[ccmid].baseAttribute[AT_ROOM]==room)){return false;}
+if(!(region==0 || U_ccmList[ccmid].baseAttribute[AT_REGI]==0 || U_ccmList[ccmid].baseAttribute[AT_REGI]==region)){return false;}
+if(!(order==0 || U_ccmList[ccmid].baseAttribute[AT_ORDE]==0 || U_ccmList[ccmid].baseAttribute[AT_ORDE]==order)){return false;}
+return true;
 }
