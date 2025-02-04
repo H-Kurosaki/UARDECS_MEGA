@@ -1547,9 +1547,10 @@ void UECSstartEthernet(){
 //---------------------------------------------------------
 void UECSresetEthernet()
 {
-  	//UECS_UDP16520.stop();
-  	//UECS_UDP16529.stop();
-  	//SPI.end();
+	UECS_UDP16520.stop();
+  	UECS_UDP16529.stop();
+  	UECS_UDP16521.stop();
+  	SPI.end();
   	UECSstartEthernet();
 }
 //------------------------------------------------------------------------
