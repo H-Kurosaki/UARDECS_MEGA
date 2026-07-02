@@ -24,10 +24,6 @@
 //損傷することがあるので注意すること。
 
 
-#include <SPI.h>
-#include <Ethernet2.h>
-#include <avr/pgmspace.h>
-#include <EEPROM.h>
 #include <Uardecs_mega.h>
 #include <Wire.h>
 #include "SHT3x.h"

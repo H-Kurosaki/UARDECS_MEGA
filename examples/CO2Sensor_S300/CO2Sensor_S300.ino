@@ -9,7 +9,7 @@
 //温室用にはS300Gを選択するのが良いと思われます。
 //Arduino UNOまたはMEGAに直結する場合、5Vモデルを使用する必要があります。
 //3.3Vモデルを使用する場合は
-//http://akizukidenshi.com/catalog/g/gM-05452/
+//秋月電子「I2Cバス用双方向電圧レベル変換モジュール(PCA9306)」
 //などを使ってセンサ側のバス電圧を3.3Vにする必要があります。
 
 
@@ -21,12 +21,10 @@
 //[GND]-[GND]
 
 //センサを校正する場合
-//S300のMCDLというピンをArduinoのGNDに直結して電源を入れたまま10分間400ppmのCO2に晒します
+//先に電源を投入し、電源を入れたままの状態でS300のMCDLピンをArduinoのGNDに接続します。
+//(電源投入前ではなく、投入後に接続すること)
+//その状態で10分間400ppmのCO2に晒します。
 
-#include <SPI.h>
-#include <Ethernet2.h>
-#include <avr/pgmspace.h>
-#include <EEPROM.h>
 #include <Uardecs_mega.h>
 #include <Wire.h>
 

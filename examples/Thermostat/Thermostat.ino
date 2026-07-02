@@ -12,10 +12,6 @@
 //購入直後のArduinoではWeb上に不定な文字列が表示されることがあります。
 //ノード名や設定値を入力することで正常に動作します。
 
-#include <SPI.h>
-#include <Ethernet2.h> //Arduino IDE Ver1.7.2以降でW5500搭載機種
-#include <avr/pgmspace.h>
-#include <EEPROM.h>
 #include <Uardecs_mega.h>
 
 /*

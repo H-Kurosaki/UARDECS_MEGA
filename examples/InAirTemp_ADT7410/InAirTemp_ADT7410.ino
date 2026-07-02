@@ -12,7 +12,7 @@
 //Ver1.7.2以降を使用します
 //○使用するライブラリ
 //UARDECS
-//http://uecs.org/arduino/uardecs.html
+//https://github.com/H-Kurosaki/UARDECS_Documents
 //説明書に従ってインストールしてください
 //
 //○ADT7410の接続
@@ -27,11 +27,6 @@
 
 
 
-#include <SPI.h>
-#include <Ethernet2.h> //Arduino IDE Ver1.7.2以降でW5500搭載機種
-//#include <Ethernet.h> //Ver1.7.2以降でW5100搭載機種
-#include <avr/pgmspace.h>
-#include <EEPROM.h>
 #include <Wire.h>
 #include <Uardecs_mega.h>
 

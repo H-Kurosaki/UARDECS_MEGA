@@ -12,10 +12,6 @@
 //文字コードはUTF-8、英数は1byteですが、日本語は3byteになります。
 //フラッシュメモリに格納可能であれば長い文字列でも表示可能です。
 
-#include <SPI.h>
-#include <Ethernet2.h>
-#include <avr/pgmspace.h>
-#include <EEPROM.h>
 #include <Uardecs_mega.h>
 
 

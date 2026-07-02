@@ -1,9 +1,4 @@
 //Sample5AutoRange
-#include <SPI.h>
-#include <Ethernet2.h> //Arduino IDE Ver1.7.2以降でW5500搭載機種
-//#include <Ethernet.h> //Ver1.7.2以降でW5100搭載機種
-#include <avr/pgmspace.h>
-#include <EEPROM.h>
 #include <Uardecs_mega.h>
 const byte U_InitPin = 3;//このピンは変更可能です
 const byte U_InitPin_Sense=HIGH;
