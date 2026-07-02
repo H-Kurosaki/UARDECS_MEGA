@@ -4,4 +4,4 @@ UARDECS is a library for implementing a protocol based on "UECS" which is a comm
 UARDECSは日本の施設園芸用の通信規格である"UECS"準拠のプロトコルをArduinoに実装するためのライブラリです。このライブラリはUARDECSの高機能バージョンで設定できる項目が大幅に増えていますが、メモリの消費量が増えているためArduino MEGAでなければ動作は保証できません。このライブラリを実行するにはEthernet Shield2 あるいはW5500を搭載したシールドを装着する必要があります。このライブラリを使うときは一緒にEthernet2ライブラリをインストールして下さい。
 
 詳細なマニュアル(日本語版)は以下で提供されます。
-https://uecs.org/arduino/uardecs.html
+https://github.com/H-Kurosaki/UARDECS_Documents

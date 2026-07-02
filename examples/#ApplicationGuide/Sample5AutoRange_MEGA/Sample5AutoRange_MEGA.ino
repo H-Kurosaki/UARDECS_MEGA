@@ -52,7 +52,7 @@ if(radiation==1023 && lowRange)
   {
 //1.1Vモードでレンジ外になった場合、5Vモードに変更
     lowRange=false;
-    analogReference(DEFAULT);//UNO基準電圧5V
+    analogReference(DEFAULT);//基準電圧5V(UNO/MEGA共通)
     analogRead(0);//読み飛ばす
     return;
   }
@@ -96,7 +96,7 @@ UECSloop();
 
 void setup()
 {
-analogReference(DEFAULT);//UNO基準電圧5V
+analogReference(DEFAULT);//基準電圧5V(UNO/MEGA共通)
 UECSsetup();
 }
 

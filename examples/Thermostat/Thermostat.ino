@@ -1,7 +1,8 @@
 /////////////////////////////////////////
 //UARDECS Sample Program "Thermostat"
-//UECS ccm "InAirTemp" recieving test Ver1.3
+//UECS ccm "InAirTemp" recieving test Ver1.4
 //By H.kurosaki 2018/10/09
+//Updated 2026/07/02
 //////////////////////////////////////////
 //[概要]
 //InAirTempを受信し、設定された温度より低い場合cndに1を、それ以外で0を出力します。
@@ -10,8 +11,6 @@
 //[注意]
 //購入直後のArduinoではWeb上に不定な文字列が表示されることがあります。
 //ノード名や設定値を入力することで正常に動作します。
-//旧バージョン(UARDECS05以前)で作成したスケッチをコンパイルするときは
-//このソースコードの後ろのほうを見て下さい。
 
 #include <SPI.h>
 #include <Ethernet2.h> //Arduino IDE Ver1.7.2以降でW5500搭載機種

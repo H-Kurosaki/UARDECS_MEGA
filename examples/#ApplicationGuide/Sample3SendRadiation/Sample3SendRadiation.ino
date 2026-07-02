@@ -20,7 +20,7 @@ struct UECSUserHtml U_html[U_HtmlLine]={};
 
 const int U_MAX_CCM = 2;//CCMの総数を2に
 UECSCCM U_ccmList[U_MAX_CCM];
-//CCM定義用の素材、被らないように適当な変数名で3つ宣言(必ずPROGMEMを付ける)
+//CCM定義用の素材、CCM1つにつき説明・Type・単位の3つを被らない変数名で宣言(必ずPROGMEMを付ける)
 const char ccmInfoTest[] PROGMEM= "NodeCondition";//CCMの説明(Webでのみ表示)
 const char ccmTypeTest[] PROGMEM= "cnd.mOC";//CCMのType文字列
 const char ccmUnitTest[] PROGMEM= "";//CCMの単位(この場合単位無し)
